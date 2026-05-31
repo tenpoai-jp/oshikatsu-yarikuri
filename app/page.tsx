@@ -514,9 +514,10 @@ export default function Home() {
                   </div>
                   <p className="text-[11px] text-gray-400">時給が時間帯で変わらない人は、4つとも同じ金額にしてOK。</p>
                   <div className="text-sm text-gray-600 mt-1">時間帯の区切り（開始時刻）</div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2">
                     {ZONE_LABELS.map((z) => (
-                      <label key={z.key} className="flex items-center justify-between gap-2 text-sm text-gray-600 bg-pink-50 rounded-xl px-3 py-1">{z.label}開始
+                      <label key={z.key} className="flex items-center justify-between gap-2 text-sm text-gray-600 bg-pink-50 rounded-xl px-3 py-2">
+                        <span>{z.label}開始</span>
                         <input type="time" value={minToTime(bounds[z.key])} onChange={(e) => setBound(z.key, e.target.value)} className={`${inputCls} py-1`} />
                       </label>
                     ))}
