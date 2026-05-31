@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseClient";
 
 type Expense = { id: number; amount: number; category: string; oshi: string; date: string };
 type Wages = { morning: number; day: number; evening: number; night: number };
@@ -67,28 +69,41 @@ export default function Home() {
   const [goalTargetInput, setGoalTargetInput] = useState("");
   const [goalAddInput, setGoalAddInput] = useState("");
 
+  const [session, setSession] = useState<Session | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authMsg, setAuthMsg] = useState("");
+  const [cloudReady, setCloudReady] = useState(false);
+
   const [view, setView] = useState({ y: 2026, m: 5 });
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
 
+  // 保存データを画面に反映（ローカル/クラウド共通）
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function applyData(d: any) {
+    if (!d || typeof d !== "object") return;
+    if (typeof d.budget === "number") setBudget(d.budget);
+    if (d.wages && typeof d.wages === "object") setWages({ ...DEFAULT_WAGES, ...d.wages });
+    else if (typeof d.wage === "number") setWages({ ...DEFAULT_WAGES, day: d.wage });
+    if (d.bounds && typeof d.bounds === "object") setBounds({ ...DEFAULT_BOUNDS, ...d.bounds });
+    if (d.incomeMode === "salary" || d.incomeMode === "shift") setIncomeMode(d.incomeMode);
+    if (typeof d.monthlySalary === "number") setMonthlySalary(d.monthlySalary);
+    if (Array.isArray(d.shifts)) setShifts(d.shifts.filter((s: Shift) => typeof s?.date === "string"));
+    if (Array.isArray(d.expenses)) setExpenses(d.expenses);
+    if (Array.isArray(d.planned)) setPlanned(d.planned);
+    if (typeof d.goalName === "string") setGoalName(d.goalName);
+    if (typeof d.goalTarget === "number") setGoalTarget(d.goalTarget);
+    if (typeof d.goalSaved === "number") setGoalSaved(d.goalSaved);
+  }
+  function currentData() {
+    return { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved };
+  }
+
+  // 起動時：ローカル保存の読み込み＋当月セット
   useEffect(() => {
     try {
       const raw = localStorage.getItem("oshikatsu-data");
-      if (raw) {
-        const d = JSON.parse(raw);
-        if (typeof d.budget === "number") setBudget(d.budget);
-        if (d.wages && typeof d.wages === "object") setWages({ ...DEFAULT_WAGES, ...d.wages });
-        else if (typeof d.wage === "number") setWages({ ...DEFAULT_WAGES, day: d.wage });
-        if (d.bounds && typeof d.bounds === "object") setBounds({ ...DEFAULT_BOUNDS, ...d.bounds });
-        if (d.incomeMode === "salary" || d.incomeMode === "shift") setIncomeMode(d.incomeMode);
-        if (typeof d.monthlySalary === "number") setMonthlySalary(d.monthlySalary);
-        if (Array.isArray(d.shifts)) setShifts(d.shifts.filter((s: Shift) => typeof s?.date === "string"));
-        if (Array.isArray(d.expenses)) setExpenses(d.expenses);
-        if (Array.isArray(d.planned)) setPlanned(d.planned);
-        if (typeof d.goalName === "string") setGoalName(d.goalName);
-        if (typeof d.goalTarget === "number") setGoalTarget(d.goalTarget);
-        if (typeof d.goalSaved === "number") setGoalSaved(d.goalSaved);
-      }
+      if (raw) applyData(JSON.parse(raw));
     } catch {}
     const now = new Date();
     const today = dateKey(now.getFullYear(), now.getMonth() + 1, now.getDate());
@@ -96,12 +111,41 @@ export default function Home() {
     setPlDate(today);
     setView({ y: now.getFullYear(), m: now.getMonth() + 1 });
     setLoaded(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 認証（ログイン状態の監視）
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // ログインしたらクラウドから読み込み（空なら今のデータを初回アップロード）
+  useEffect(() => {
+    if (!supabase || !session) { setCloudReady(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.from("user_data").select("data").eq("user_id", session.user.id).maybeSingle();
+      if (cancelled) return;
+      if (!error && data && data.data) applyData(data.data);
+      else await supabase.from("user_data").upsert({ user_id: session.user.id, data: currentData() });
+      setCloudReady(true);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // 変更を保存（ローカル＋ログイン中はクラウドにも）
   useEffect(() => {
     if (!loaded) return;
-    localStorage.setItem("oshikatsu-data", JSON.stringify({ budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved }));
-  }, [budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, loaded]);
+    const blob = { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved };
+    localStorage.setItem("oshikatsu-data", JSON.stringify(blob));
+    if (supabase && session && cloudReady) {
+      supabase.from("user_data").upsert({ user_id: session.user.id, data: blob });
+    }
+  }, [budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, loaded, session, cloudReady]);
 
   // 時間帯の区切り（ユーザー設定）
   const sortedBounds = ([
@@ -256,6 +300,18 @@ export default function Home() {
     setGoalName("");
     setGoalTarget(0);
     setGoalSaved(0);
+  }
+  async function sendMagicLink() {
+    if (!supabase || !authEmail) return;
+    setAuthMsg("送信中…");
+    const { error } = await supabase.auth.signInWithOtp({ email: authEmail.trim(), options: { emailRedirectTo: window.location.origin } });
+    setAuthMsg(error ? "送信に失敗：" + error.message : "📩 メールを送りました！届いたリンクを開けばログイン完了です。");
+  }
+  async function logout() {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setSession(null);
+    setCloudReady(false);
   }
   function changeMonth(delta: number) {
     let y = view.y, m = view.m + delta;
@@ -561,6 +617,28 @@ export default function Home() {
         {/* ====== 設定 ====== */}
         {tab === "settings" && (
           <>
+            {supabase && (
+              <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
+                <span className="text-sm font-bold text-gray-700">☁️ クラウド保存（端末をまたいで保存）</span>
+                {session ? (
+                  <>
+                    <p className="text-sm text-gray-600">ログイン中：{session.user.email}</p>
+                    <p className="text-[11px] text-green-600">✅ データは自動でクラウド保存。別の端末でも同じデータで使えます。</p>
+                    <button onClick={logout} className="self-start text-sm text-gray-400 hover:text-red-400">ログアウト</button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-400">ログインすると、機種変しても消えない＆スマホ⇄PCで同じデータに。メールに届くリンクを開くだけ（パスワード不要）。</p>
+                    <div className="flex gap-2">
+                      <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="メールアドレス" className={`${inputCls} flex-1 py-2 text-sm placeholder-gray-400`} />
+                      <button onClick={sendMagicLink} disabled={!authEmail} className="bg-pink-500 text-white rounded-xl px-4 font-bold disabled:opacity-40">リンク送信</button>
+                    </div>
+                    {authMsg && <p className="text-[11px] text-gray-500">{authMsg}</p>}
+                  </>
+                )}
+              </section>
+            )}
+
             <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
               <span className="text-sm font-bold text-gray-700">⚙️ 予算</span>
               <label className="flex items-center justify-between text-sm text-gray-600">今月の予算
