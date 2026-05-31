@@ -448,11 +448,13 @@ export default function Home() {
                       })}
                     </ul>
                   )}
-                  <div className="flex items-center gap-2">
-                    <input type="time" value={calStart} onChange={(e) => setCalStart(e.target.value)} className={`${inputCls} py-2 text-sm`} />
-                    <span className="text-gray-400">〜</span>
-                    <input type="time" value={calEnd} onChange={(e) => setCalEnd(e.target.value)} className={`${inputCls} py-2 text-sm`} />
-                    <button onClick={() => addShiftOn(selDateStr)} disabled={!calStart || !calEnd} className="bg-green-500 text-white rounded-xl px-4 font-bold disabled:opacity-40">追加</button>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <input type="time" value={calStart} onChange={(e) => setCalStart(e.target.value)} className={`${inputCls} flex-1 min-w-0 py-2 text-sm`} />
+                      <span className="text-gray-400">〜</span>
+                      <input type="time" value={calEnd} onChange={(e) => setCalEnd(e.target.value)} className={`${inputCls} flex-1 min-w-0 py-2 text-sm`} />
+                    </div>
+                    <button onClick={() => addShiftOn(selDateStr)} disabled={!calStart || !calEnd} className="bg-green-500 text-white rounded-xl py-2 font-bold disabled:opacity-40">追加</button>
                   </div>
                   {preview && (
                     <p className="text-xs text-gray-500">
@@ -534,12 +536,14 @@ export default function Home() {
         <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v0.8</p>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-pink-100 flex justify-around py-2 max-w-md mx-auto">
-        {[{ key: "home", label: "ホーム", icon: "🏠" }, { key: "calendar", label: "カレンダー", icon: "📅" }, { key: "settings", label: "設定", icon: "⚙️" }].map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key as typeof tab)} className={`flex flex-col items-center text-xs px-4 ${tab === t.key ? "text-pink-600 font-bold" : "text-gray-400"}`}>
-            <span className="text-lg">{t.icon}</span>{t.label}
-          </button>
-        ))}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-pink-100">
+        <div className="max-w-md mx-auto flex justify-around py-2">
+          {[{ key: "home", label: "ホーム", icon: "🏠" }, { key: "calendar", label: "カレンダー", icon: "📅" }, { key: "settings", label: "設定", icon: "⚙️" }].map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key as typeof tab)} className={`flex flex-col items-center text-xs flex-1 ${tab === t.key ? "text-pink-600 font-bold" : "text-gray-400"}`}>
+              <span className="text-lg">{t.icon}</span>{t.label}
+            </button>
+          ))}
+        </div>
       </nav>
     </div>
   );
