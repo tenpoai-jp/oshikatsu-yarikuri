@@ -235,7 +235,10 @@ export default function Home() {
     <div className="min-h-screen bg-pink-50 flex justify-center font-sans">
       <main className="w-full max-w-md px-4 py-6 pb-24 flex flex-col gap-4">
         <header className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-pink-700">🎀 推し活やりくり</h1>
+          <div>
+            <h1 className="text-xl font-bold text-pink-700">🎀 オシヤリ</h1>
+            <p className="text-[10px] text-pink-400 leading-none">推し活やりくり</p>
+          </div>
           <span className="text-sm text-pink-400">{view.y}年{view.m}月</span>
         </header>
 
