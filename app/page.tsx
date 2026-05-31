@@ -124,16 +124,26 @@ export default function Home() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // ログイン直後の「1回だけ」クラウドから読み込み（トークン更新等での再読み込み＝上書き事故を防ぐ）
+  // ログイン直後の「1回だけ」クラウドと同期。新しい方を優先（古い方で上書きしない＝データ消失防止）
   useEffect(() => {
     if (!supabase || !userId) { setCloudReady(false); hydratedFor.current = null; return; }
-    if (hydratedFor.current === userId) return; // このユーザーは読み込み済み
+    if (hydratedFor.current === userId) return; // このユーザーは同期済み
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase.from("user_data").select("data").eq("user_id", userId).maybeSingle();
       if (cancelled) return;
-      if (!error && data && data.data) applyData(data.data);
-      else await supabase.from("user_data").upsert({ user_id: userId, data: currentData() });
+      const cloud = !error && data && data.data ? data.data : null;
+      let local: { updatedAt?: number } | null = null;
+      try { const raw = localStorage.getItem("oshikatsu-data"); if (raw) local = JSON.parse(raw); } catch {}
+      const cloudT = cloud && typeof cloud.updatedAt === "number" ? cloud.updatedAt : 0;
+      const localT = local && typeof local.updatedAt === "number" ? local.updatedAt : 0;
+      if (cloud && cloudT >= localT) {
+        applyData(cloud); // クラウドが新しい（別端末で更新等）→ 反映
+      } else if (local && localT > cloudT) {
+        await supabase.from("user_data").upsert({ user_id: userId, data: local }); // ローカルが新しい→クラウドへ
+      } else if (!cloud) {
+        await supabase.from("user_data").upsert({ user_id: userId, data: { ...currentData(), updatedAt: Date.now() } });
+      }
       hydratedFor.current = userId;
       setCloudReady(true);
     })();
@@ -144,7 +154,7 @@ export default function Home() {
   // 変更を保存（ローカル＋ログイン中はクラウドにも）
   useEffect(() => {
     if (!loaded) return;
-    const blob = { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved };
+    const blob = { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, updatedAt: Date.now() };
     localStorage.setItem("oshikatsu-data", JSON.stringify(blob));
     if (supabase && userId && cloudReady) {
       supabase.from("user_data").upsert({ user_id: userId, data: blob });
