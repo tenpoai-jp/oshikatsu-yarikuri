@@ -60,6 +60,13 @@ export default function Home() {
   const [plAmount, setPlAmount] = useState("");
   const [plDate, setPlDate] = useState("");
 
+  const [goalName, setGoalName] = useState("");
+  const [goalTarget, setGoalTarget] = useState(0);
+  const [goalSaved, setGoalSaved] = useState(0);
+  const [goalNameInput, setGoalNameInput] = useState("");
+  const [goalTargetInput, setGoalTargetInput] = useState("");
+  const [goalAddInput, setGoalAddInput] = useState("");
+
   const [view, setView] = useState({ y: 2026, m: 5 });
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -78,6 +85,9 @@ export default function Home() {
         if (Array.isArray(d.shifts)) setShifts(d.shifts.filter((s: Shift) => typeof s?.date === "string"));
         if (Array.isArray(d.expenses)) setExpenses(d.expenses);
         if (Array.isArray(d.planned)) setPlanned(d.planned);
+        if (typeof d.goalName === "string") setGoalName(d.goalName);
+        if (typeof d.goalTarget === "number") setGoalTarget(d.goalTarget);
+        if (typeof d.goalSaved === "number") setGoalSaved(d.goalSaved);
       }
     } catch {}
     const now = new Date();
@@ -90,8 +100,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!loaded) return;
-    localStorage.setItem("oshikatsu-data", JSON.stringify({ budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned }));
-  }, [budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, loaded]);
+    localStorage.setItem("oshikatsu-data", JSON.stringify({ budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved }));
+  }, [budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, loaded]);
 
   // 時間帯の区切り（ユーザー設定）
   const sortedBounds = ([
@@ -165,6 +175,11 @@ export default function Home() {
   const projOver = projRemaining < 0;
   const projNeedHours = refWage > 0 ? (projOver ? -projRemaining : 0) / refWage : 0;
 
+  // 貯金目標
+  const goalRemaining = Math.max(0, goalTarget - goalSaved);
+  const goalPct = goalTarget > 0 ? Math.min(100, Math.round((goalSaved / goalTarget) * 100)) : 0;
+  const goalNeedHours = refWage > 0 ? goalRemaining / refWage : 0;
+
   const oshiTotals: Record<string, number> = {};
   const catTotals: Record<string, number> = {};
   monthExpenses.forEach((e) => {
@@ -222,6 +237,25 @@ export default function Home() {
   function fulfillPlanned(p: Planned) {
     setExpenses([{ id: Date.now(), amount: p.amount, category: "その他", oshi: p.label, date: p.date }, ...expenses]);
     setPlanned(planned.filter((x) => x.id !== p.id));
+  }
+  function setGoal() {
+    const t = parseInt(goalTargetInput, 10);
+    if (!t || t <= 0) return;
+    setGoalName(goalNameInput.trim() || "推し活の目標");
+    setGoalTarget(t);
+    setGoalNameInput("");
+    setGoalTargetInput("");
+  }
+  function addSaving() {
+    const a = parseInt(goalAddInput, 10);
+    if (!a) return;
+    setGoalSaved(Math.max(0, goalSaved + a));
+    setGoalAddInput("");
+  }
+  function clearGoal() {
+    setGoalName("");
+    setGoalTarget(0);
+    setGoalSaved(0);
   }
   function changeMonth(delta: number) {
     let y = view.y, m = view.m + delta;
@@ -320,6 +354,43 @@ export default function Home() {
                 {incomeMode === "shift" && <p className="text-[11px] text-gray-400">シフトは📅カレンダーから日ごとに追加できます</p>}
               </section>
             )}
+
+            {/* 推し活の貯金目標 */}
+            <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
+              <span className="text-sm font-bold text-gray-700">🎯 推し活の貯金目標</span>
+              {goalTarget <= 0 ? (
+                <>
+                  <p className="text-sm text-gray-400">ライブ遠征・グッズ・推しの記念日…貯めたい目標を決めよう！</p>
+                  <input type="text" value={goalNameInput} onChange={(e) => setGoalNameInput(e.target.value)} placeholder="目標（例: 夏のライブ遠征）" className={`${inputCls} w-full py-2 text-sm placeholder-gray-400`} />
+                  <div className="flex gap-2">
+                    <input type="number" inputMode="numeric" value={goalTargetInput} onChange={(e) => setGoalTargetInput(e.target.value)} placeholder="目標金額（円）" className={`${inputCls} flex-1 py-2 text-sm placeholder-gray-400`} />
+                    <button onClick={setGoal} disabled={!goalTargetInput} className="bg-pink-500 text-white rounded-xl px-4 font-bold disabled:opacity-40">設定</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-baseline">
+                    <span className="font-bold text-gray-800 truncate">{goalName}</span>
+                    <button onClick={clearGoal} className="text-[11px] text-gray-300 hover:text-red-400">リセット</button>
+                  </div>
+                  <div className="h-3 w-full rounded-full bg-pink-100 overflow-hidden">
+                    <div className="h-full rounded-full bg-pink-500" style={{ width: `${goalPct}%` }} />
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>{yen(goalSaved)} / {yen(goalTarget)}</span><span>{goalPct}%</span>
+                  </div>
+                  {goalRemaining > 0 ? (
+                    <p className="text-sm text-purple-600">あと {yen(goalRemaining)}（バイト{hoursLabel(goalNeedHours)}ぶん）</p>
+                  ) : (
+                    <p className="text-sm font-bold text-green-600">🎉 目標達成！おめでとう！</p>
+                  )}
+                  <div className="flex gap-2">
+                    <input type="number" inputMode="numeric" value={goalAddInput} onChange={(e) => setGoalAddInput(e.target.value)} placeholder="貯金額を追加" className={`${inputCls} flex-1 py-2 text-sm placeholder-gray-400`} />
+                    <button onClick={addSaving} disabled={!goalAddInput} className="bg-pink-500 text-white rounded-xl px-4 font-bold disabled:opacity-40">貯金</button>
+                  </div>
+                </>
+              )}
+            </section>
 
             {spent > 0 && (
               <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
