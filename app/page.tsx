@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -73,6 +73,8 @@ export default function Home() {
   const [authEmail, setAuthEmail] = useState("");
   const [authMsg, setAuthMsg] = useState("");
   const [cloudReady, setCloudReady] = useState(false);
+  const userId = session?.user?.id ?? null;
+  const hydratedFor = useRef<string | null>(null);
 
   const [view, setView] = useState({ y: 2026, m: 5 });
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -122,30 +124,32 @@ export default function Home() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // ログインしたらクラウドから読み込み（空なら今のデータを初回アップロード）
+  // ログイン直後の「1回だけ」クラウドから読み込み（トークン更新等での再読み込み＝上書き事故を防ぐ）
   useEffect(() => {
-    if (!supabase || !session) { setCloudReady(false); return; }
+    if (!supabase || !userId) { setCloudReady(false); hydratedFor.current = null; return; }
+    if (hydratedFor.current === userId) return; // このユーザーは読み込み済み
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase.from("user_data").select("data").eq("user_id", session.user.id).maybeSingle();
+      const { data, error } = await supabase.from("user_data").select("data").eq("user_id", userId).maybeSingle();
       if (cancelled) return;
       if (!error && data && data.data) applyData(data.data);
-      else await supabase.from("user_data").upsert({ user_id: session.user.id, data: currentData() });
+      else await supabase.from("user_data").upsert({ user_id: userId, data: currentData() });
+      hydratedFor.current = userId;
       setCloudReady(true);
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [userId]);
 
   // 変更を保存（ローカル＋ログイン中はクラウドにも）
   useEffect(() => {
     if (!loaded) return;
     const blob = { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved };
     localStorage.setItem("oshikatsu-data", JSON.stringify(blob));
-    if (supabase && session && cloudReady) {
-      supabase.from("user_data").upsert({ user_id: session.user.id, data: blob });
+    if (supabase && userId && cloudReady) {
+      supabase.from("user_data").upsert({ user_id: userId, data: blob });
     }
-  }, [budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, loaded, session, cloudReady]);
+  }, [budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, loaded, userId, cloudReady]);
 
   // 時間帯の区切り（ユーザー設定）
   const sortedBounds = ([
