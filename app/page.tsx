@@ -170,9 +170,13 @@ export default function Home() {
   useEffect(() => {
     if (!loaded) return;
     const blob = { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, bgImage, updatedAt: Date.now() };
-    localStorage.setItem("oshikatsu-data", JSON.stringify(blob));
+    // localStorageは容量超過(大きい画像など)で例外を投げることがあるので保護（落ちないように）
+    try { localStorage.setItem("oshikatsu-data", JSON.stringify(blob)); } catch {}
+    // クラウドは入力のたびに全データ(画像含む)を送ると重いので、0.8秒だけまとめて送信（デバウンス）
     if (supabase && userId && cloudReady) {
-      supabase.from("user_data").upsert({ user_id: userId, data: blob });
+      const sb = supabase;
+      const t = setTimeout(() => { sb.from("user_data").upsert({ user_id: userId, data: blob }); }, 800);
+      return () => clearTimeout(t);
     }
   }, [budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, bgImage, loaded, userId, cloudReady]);
 
@@ -375,20 +379,22 @@ export default function Home() {
   const inputCls = "rounded-lg border border-gray-200 px-2 py-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
 
   return (
-    <div
-      className={`fixed top-0 left-0 right-0 overflow-y-auto overflow-x-hidden flex justify-center font-sans ${bgImage ? "has-wallpaper bg-cover bg-center bg-no-repeat" : "bg-pink-50"}`}
-      style={
-        bgImage && bgH != null
-          ? {
-              // 高さをピクセル固定＝拡大しない。背景はこのスクロールコンテナ自体に貼るので、
-              // アドレスバーが動いてもコンテンツと一体で動く＝背景だけがズレて動くことがない。
-              // 上に薄い白(15%)を重ねて文字を読みやすく。
-              height: bgH,
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.15), rgba(255,255,255,0.15)), url(${bgImage})`,
-            }
-          : { height: "100%" }
-      }
-    >
+    // 枠(frame)：スクロールしない。この中で「背景」と「スクロール領域」を別々の兄弟として並べる。
+    // → 背景はスクロール要素と物理的に切り離されるので、スクロールに連動して動かない＝静止。
+    <div className="fixed inset-0 overflow-hidden font-sans">
+      {bgImage && bgH != null && (
+        <>
+          {/* 背景の写真：高さをピクセル固定＝拡大しない。スクロールしない枠の中なので動かない */}
+          <div
+            className="absolute top-0 left-0 w-full bg-cover bg-center bg-no-repeat"
+            style={{ height: bgH, backgroundImage: `url(${bgImage})` }}
+          />
+          {/* 薄い白膜（文字を読みやすく） */}
+          <div className="pointer-events-none absolute top-0 left-0 w-full bg-white/15" style={{ height: bgH }} />
+        </>
+      )}
+      {/* スクロール領域：ここだけが縦スクロールする */}
+      <div className={`absolute inset-0 overflow-y-auto overflow-x-hidden flex justify-center ${bgImage ? "has-wallpaper" : "bg-pink-50"}`}>
       <main className="w-full max-w-md px-4 py-6 pb-24 flex flex-col gap-4">
         <header className="flex items-center justify-between">
           <div>
@@ -781,6 +787,7 @@ export default function Home() {
           ))}
         </div>
       </nav>
+      </div>
     </div>
   );
 }
