@@ -66,6 +66,7 @@ export default function Home() {
   const [goalTarget, setGoalTarget] = useState(0);
   const [goalSaved, setGoalSaved] = useState(0);
   const [bgImage, setBgImage] = useState("");
+  const [bgH, setBgH] = useState<number | null>(null);
   const [goalNameInput, setGoalNameInput] = useState("");
   const [goalTargetInput, setGoalTargetInput] = useState("");
   const [goalAddInput, setGoalAddInput] = useState("");
@@ -116,6 +117,18 @@ export default function Home() {
     setView({ y: now.getFullYear(), m: now.getMonth() + 1 });
     setLoaded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 背景の高さをピクセルで固定する。スクロール時のアドレスバー開閉では更新しない＝背景が拡大縮小しない。
+  // 画面が確実に埋まるよう、考えうる最大値（画面の高さ/幅も含む）を採用。回転時のみ再計算。
+  useEffect(() => {
+    const calc = () => {
+      const s = typeof window !== "undefined" ? window.screen : null;
+      setBgH(Math.max(window.innerHeight, window.innerWidth, s?.height || 0, s?.width || 0));
+    };
+    calc();
+    window.addEventListener("orientationchange", calc);
+    return () => window.removeEventListener("orientationchange", calc);
   }, []);
 
   // 認証（ログイン状態の監視）
@@ -362,12 +375,18 @@ export default function Home() {
   const inputCls = "rounded-lg border border-gray-200 px-2 py-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
 
   return (
-    <div
-      className={`fixed inset-0 overflow-y-auto overflow-x-hidden flex justify-center font-sans ${bgImage ? "has-wallpaper bg-cover bg-center bg-no-repeat" : "bg-pink-50"}`}
-      style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
-    >
-      {/* 背景の写真を少し暗く（薄い白膜）して文字を読みやすく。固定なのでスクロールしても動かない */}
-      {bgImage && <div className="pointer-events-none fixed inset-0 -z-10 bg-white/15" />}
+    <>
+      {/* 壁紙：高さをピクセル固定した独立レイヤー。スクロールしても一切リサイズされない（全ブラウザ対応） */}
+      {bgImage && bgH != null && (
+        <>
+          <div
+            className="fixed top-0 left-0 w-full -z-20 bg-cover bg-center bg-no-repeat"
+            style={{ height: bgH, backgroundImage: `url(${bgImage})` }}
+          />
+          <div className="pointer-events-none fixed top-0 left-0 w-full -z-10 bg-white/15" style={{ height: bgH }} />
+        </>
+      )}
+      <div className={`fixed inset-0 overflow-y-auto overflow-x-hidden flex justify-center font-sans ${bgImage ? "has-wallpaper" : "bg-pink-50"}`}>
       <main className="w-full max-w-md px-4 py-6 pb-24 flex flex-col gap-4">
         <header className="flex items-center justify-between">
           <div>
@@ -760,6 +779,7 @@ export default function Home() {
           ))}
         </div>
       </nav>
-    </div>
+      </div>
+    </>
   );
 }
