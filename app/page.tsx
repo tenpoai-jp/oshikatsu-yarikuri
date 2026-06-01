@@ -800,10 +800,11 @@ export default function Home() {
 
       {/* 下のタブバー：スクロール領域の外に置き、枠の最下部に固定（中身と重ならない） */}
       <nav className="absolute bottom-0 left-0 right-0 z-10 bg-white border-t border-pink-100">
-        <div className="max-w-md mx-auto flex justify-around py-2">
+        <div className="max-w-md mx-auto w-full flex justify-around px-1 py-2">
           {[{ key: "home", label: "ホーム", icon: "🏠" }, { key: "plan", label: "予定", icon: "🔮" }, { key: "calendar", label: "カレンダー", icon: "📅" }, { key: "settings", label: "設定", icon: "⚙️" }].map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key as typeof tab)} className={`flex flex-col items-center text-xs flex-1 ${tab === t.key ? "text-pink-600 font-bold" : "text-gray-400"}`}>
-              <span className="text-lg">{t.icon}</span>{t.label}
+            <button key={t.key} onClick={() => setTab(t.key as typeof tab)} className={`flex flex-col items-center min-w-0 flex-1 px-0.5 ${tab === t.key ? "text-pink-600 font-bold" : "text-gray-400"}`}>
+              <span className="text-lg leading-none">{t.icon}</span>
+              <span className="mt-0.5 w-full text-center truncate text-[10px] leading-none">{t.label}</span>
             </button>
           ))}
         </div>
