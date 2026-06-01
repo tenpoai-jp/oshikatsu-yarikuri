@@ -393,9 +393,9 @@ export default function Home() {
           <div className="pointer-events-none absolute top-0 left-0 w-full bg-white/15" style={{ height: bgH }} />
         </>
       )}
-      {/* スクロール領域：ここだけが縦スクロールする */}
-      <div className={`absolute inset-0 overflow-y-auto overflow-x-hidden flex justify-center ${bgImage ? "has-wallpaper" : "bg-pink-50"}`}>
-      <main className="w-full max-w-md px-4 pt-6 pb-48 flex flex-col gap-4">
+      {/* スクロール領域：ここだけが縦スクロールする（flexで引き伸ばさず、mx-autoで中央寄せ） */}
+      <div className={`absolute inset-0 overflow-y-auto overflow-x-hidden ${bgImage ? "has-wallpaper" : "bg-pink-50"}`}>
+      <main className="w-full max-w-md mx-auto px-4 pt-6 pb-48 flex flex-col gap-4">
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-pink-700">🎀 オシヤリ</h1>
