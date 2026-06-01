@@ -375,18 +375,20 @@ export default function Home() {
   const inputCls = "rounded-lg border border-gray-200 px-2 py-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
 
   return (
-    <>
-      {/* 壁紙：高さをピクセル固定した独立レイヤー。スクロールしても一切リサイズされない（全ブラウザ対応） */}
-      {bgImage && bgH != null && (
-        <>
-          <div
-            className="fixed top-0 left-0 w-full -z-20 bg-cover bg-center bg-no-repeat"
-            style={{ height: bgH, backgroundImage: `url(${bgImage})` }}
-          />
-          <div className="pointer-events-none fixed top-0 left-0 w-full -z-10 bg-white/15" style={{ height: bgH }} />
-        </>
-      )}
-      <div className={`fixed inset-0 overflow-y-auto overflow-x-hidden flex justify-center font-sans ${bgImage ? "has-wallpaper" : "bg-pink-50"}`}>
+    <div
+      className={`fixed top-0 left-0 right-0 overflow-y-auto overflow-x-hidden flex justify-center font-sans ${bgImage ? "has-wallpaper bg-cover bg-center bg-no-repeat" : "bg-pink-50"}`}
+      style={
+        bgImage && bgH != null
+          ? {
+              // 高さをピクセル固定＝拡大しない。背景はこのスクロールコンテナ自体に貼るので、
+              // アドレスバーが動いてもコンテンツと一体で動く＝背景だけがズレて動くことがない。
+              // 上に薄い白(15%)を重ねて文字を読みやすく。
+              height: bgH,
+              backgroundImage: `linear-gradient(rgba(255,255,255,0.15), rgba(255,255,255,0.15)), url(${bgImage})`,
+            }
+          : { height: "100%" }
+      }
+    >
       <main className="w-full max-w-md px-4 py-6 pb-24 flex flex-col gap-4">
         <header className="flex items-center justify-between">
           <div>
@@ -779,7 +781,6 @@ export default function Home() {
           ))}
         </div>
       </nav>
-      </div>
-    </>
+    </div>
   );
 }
