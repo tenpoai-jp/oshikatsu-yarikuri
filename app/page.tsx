@@ -65,6 +65,7 @@ export default function Home() {
   const [goalName, setGoalName] = useState("");
   const [goalTarget, setGoalTarget] = useState(0);
   const [goalSaved, setGoalSaved] = useState(0);
+  const [bgImage, setBgImage] = useState("");
   const [goalNameInput, setGoalNameInput] = useState("");
   const [goalTargetInput, setGoalTargetInput] = useState("");
   const [goalAddInput, setGoalAddInput] = useState("");
@@ -96,9 +97,10 @@ export default function Home() {
     if (typeof d.goalName === "string") setGoalName(d.goalName);
     if (typeof d.goalTarget === "number") setGoalTarget(d.goalTarget);
     if (typeof d.goalSaved === "number") setGoalSaved(d.goalSaved);
+    if (typeof d.bgImage === "string") setBgImage(d.bgImage);
   }
   function currentData() {
-    return { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved };
+    return { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, bgImage };
   }
 
   // 起動時：ローカル保存の読み込み＋当月セット
@@ -154,12 +156,12 @@ export default function Home() {
   // 変更を保存（ローカル＋ログイン中はクラウドにも）
   useEffect(() => {
     if (!loaded) return;
-    const blob = { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, updatedAt: Date.now() };
+    const blob = { budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, bgImage, updatedAt: Date.now() };
     localStorage.setItem("oshikatsu-data", JSON.stringify(blob));
     if (supabase && userId && cloudReady) {
       supabase.from("user_data").upsert({ user_id: userId, data: blob });
     }
-  }, [budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, loaded, userId, cloudReady]);
+  }, [budget, wages, bounds, incomeMode, monthlySalary, shifts, expenses, planned, goalName, goalTarget, goalSaved, bgImage, loaded, userId, cloudReady]);
 
   // 時間帯の区切り（ユーザー設定）
   const sortedBounds = ([
@@ -315,6 +317,30 @@ export default function Home() {
     setGoalTarget(0);
     setGoalSaved(0);
   }
+  function onPickWallpaper(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onload = () => {
+        // 大きすぎる写真はlocalStorage/クラウドに重いので、長辺1080pxまで縮小してJPEG圧縮
+        const maxSide = 1080;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, w, h);
+        setBgImage(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ""; // 同じファイルを選び直せるように
+  }
   async function sendMagicLink() {
     if (!supabase || !authEmail) return;
     setAuthMsg("送信中…");
@@ -336,7 +362,13 @@ export default function Home() {
   const inputCls = "rounded-lg border border-gray-200 px-2 py-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
 
   return (
-    <div className="min-h-screen bg-pink-50 flex justify-center font-sans">
+    <div className={`min-h-screen flex justify-center font-sans ${bgImage ? "has-wallpaper" : "bg-pink-50"}`}>
+      {bgImage && (
+        <>
+          <div className="fixed inset-0 -z-20 bg-cover bg-center" style={{ backgroundImage: `url(${bgImage})` }} />
+          <div className="fixed inset-0 -z-10 bg-white/35" />
+        </>
+      )}
       <main className="w-full max-w-md px-4 py-6 pb-24 flex flex-col gap-4">
         <header className="flex items-center justify-between">
           <div>
@@ -654,6 +686,24 @@ export default function Home() {
             )}
 
             <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
+              <span className="text-sm font-bold text-gray-700">🎀 壁紙（推しの写真）</span>
+              <p className="text-sm text-gray-400">好きな写真を背景にできます。アプリ内で自動で軽くするので、推しの画像でOK！</p>
+              {bgImage && (
+                <div className="rounded-xl overflow-hidden h-28 bg-cover bg-center" style={{ backgroundImage: `url(${bgImage})` }} />
+              )}
+              <div className="flex gap-2">
+                <label className="flex-1 bg-pink-500 text-white rounded-xl py-2 font-bold text-center cursor-pointer active:scale-95 transition">
+                  {bgImage ? "写真を変える" : "写真を選ぶ"}
+                  <input type="file" accept="image/*" onChange={onPickWallpaper} className="hidden" />
+                </label>
+                {bgImage && (
+                  <button onClick={() => setBgImage("")} className="rounded-xl px-4 font-bold bg-pink-50 text-gray-500">外す</button>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-400">※ 自分や他人の権利を侵害しない範囲で楽しんでね。画像はあなたの保存データにだけ使われます。</p>
+            </section>
+
+            <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
               <span className="text-sm font-bold text-gray-700">⚙️ 予算</span>
               <label className="flex items-center justify-between text-sm text-gray-600">今月の予算
                 <input type="number" value={budget} onChange={(e) => setBudget(parseInt(e.target.value, 10) || 0)} className={`${inputCls} w-28 py-1 text-right`} />
@@ -699,7 +749,7 @@ export default function Home() {
           </>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v0.8</p>
+        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v0.9</p>
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-pink-100">
