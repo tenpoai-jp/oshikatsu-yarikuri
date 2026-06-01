@@ -395,7 +395,7 @@ export default function Home() {
       )}
       {/* スクロール領域：ここだけが縦スクロールする（flexで引き伸ばさず、mx-autoで中央寄せ） */}
       <div className={`absolute inset-0 overflow-y-auto overflow-x-hidden ${bgImage ? "has-wallpaper" : "bg-pink-50"}`}>
-      <main className="w-full max-w-md mx-auto px-4 pt-6 pb-48 flex flex-col gap-4">
+      <main className="w-full max-w-md mx-auto px-4 pt-6 pb-24 flex flex-col gap-4">
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-pink-700">🎀 オシヤリ</h1>
