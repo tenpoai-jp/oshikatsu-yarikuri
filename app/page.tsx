@@ -362,14 +362,12 @@ export default function Home() {
   const inputCls = "rounded-lg border border-gray-200 px-2 py-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
 
   return (
-    <div className={`min-h-screen flex justify-center font-sans ${bgImage ? "has-wallpaper" : "bg-pink-50"}`}>
-      {bgImage && (
-        <>
-          {/* 高さを100lvh(=バーが隠れた最大の高さ)に固定。スクロールでアドレスバーが開閉しても伸び縮みしない */}
-          <div className="fixed top-0 left-0 w-full -z-20 bg-cover bg-center" style={{ height: "100lvh", backgroundImage: `url(${bgImage})` }} />
-          <div className="fixed top-0 left-0 w-full -z-10 bg-white/15" style={{ height: "100lvh" }} />
-        </>
-      )}
+    <div
+      className={`fixed inset-0 overflow-y-auto overflow-x-hidden flex justify-center font-sans ${bgImage ? "has-wallpaper bg-cover bg-center bg-no-repeat" : "bg-pink-50"}`}
+      style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
+    >
+      {/* 背景の写真を少し暗く（薄い白膜）して文字を読みやすく。固定なのでスクロールしても動かない */}
+      {bgImage && <div className="pointer-events-none fixed inset-0 -z-10 bg-white/15" />}
       <main className="w-full max-w-md px-4 py-6 pb-24 flex flex-col gap-4">
         <header className="flex items-center justify-between">
           <div>

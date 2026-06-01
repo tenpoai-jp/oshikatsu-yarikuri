@@ -15,7 +15,11 @@
 html,
 body {
   max-width: 100%;
-  overflow-x: hidden;
+  height: 100%;
+  /* ページ本体は固定。スクロールは中の固定コンテナ(fixed inset-0)が担当する。
+     こうするとスマホでアドレスバーが伸縮せず、固定背景が拡大縮小されない。 */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
