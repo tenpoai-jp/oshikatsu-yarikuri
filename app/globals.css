@@ -26,9 +26,9 @@ body {
 
 /* 壁紙オン時：白いカード(.bg-white)を半透明にして写真を透かす */
 .has-wallpaper .bg-white {
-  background-color: rgba(255, 255, 255, 0.82) !important;
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
+  background-color: rgba(255, 255, 255, 0.74) !important;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 /* ヘッダーの文字を写真の上でも読めるように */
 .has-wallpaper header h1,

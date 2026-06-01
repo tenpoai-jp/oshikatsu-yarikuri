@@ -365,8 +365,9 @@ export default function Home() {
     <div className={`min-h-screen flex justify-center font-sans ${bgImage ? "has-wallpaper" : "bg-pink-50"}`}>
       {bgImage && (
         <>
-          <div className="fixed inset-0 -z-20 bg-cover bg-center" style={{ backgroundImage: `url(${bgImage})` }} />
-          <div className="fixed inset-0 -z-10 bg-white/35" />
+          {/* 高さを100lvh(=バーが隠れた最大の高さ)に固定。スクロールでアドレスバーが開閉しても伸び縮みしない */}
+          <div className="fixed top-0 left-0 w-full -z-20 bg-cover bg-center" style={{ height: "100lvh", backgroundImage: `url(${bgImage})` }} />
+          <div className="fixed top-0 left-0 w-full -z-10 bg-white/15" style={{ height: "100lvh" }} />
         </>
       )}
       <main className="w-full max-w-md px-4 py-6 pb-24 flex flex-col gap-4">
