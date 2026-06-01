@@ -34,7 +34,7 @@ type Bounds = { morning: number; day: number; evening: number; night: number };
 const DEFAULT_BOUNDS: Bounds = { morning: 300, day: 600, evening: 1080, night: 1320 };
 
 export default function Home() {
-  const [tab, setTab] = useState<"home" | "calendar" | "settings">("home");
+  const [tab, setTab] = useState<"home" | "plan" | "calendar" | "settings">("home");
   const [breakdownBy, setBreakdownBy] = useState<"oshi" | "category">("oshi");
 
   const [budget, setBudget] = useState(10000);
@@ -417,42 +417,6 @@ export default function Home() {
               {nearLimit && <p className="text-sm font-medium text-amber-600">⚠️ 予算の{percent}%。そろそろ使いすぎ注意！</p>}
             </section>
 
-            {/* 先読み：この先の出費予定 */}
-            <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
-              <span className="text-sm font-bold text-gray-700">🔮 この先の出費予定（先読み）</span>
-              {monthPlanned.length === 0 ? (
-                <p className="text-sm text-gray-400">これから使う予定（ライブ・グッズ予約など）を入れると、予算オーバーを先に教えます。</p>
-              ) : (
-                <>
-                  <ul className="flex flex-col gap-2 text-sm">
-                    {monthPlanned.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between gap-2">
-                        <span className="flex-1 truncate"><span className="text-gray-400 text-xs">{p.date?.slice(5)} </span><span className="text-gray-800">{p.label}</span></span>
-                        <span className="text-gray-700">{yen(p.amount)}</span>
-                        <button onClick={() => fulfillPlanned(p)} className="text-[11px] text-green-600 font-bold px-1">使った</button>
-                        <button onClick={() => removePlanned(p.id)} className="text-gray-300 hover:text-red-400 px-1">✕</button>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className={`rounded-xl p-3 text-sm ${projOver ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
-                    {projOver ? (
-                      <>予定どおりだと <span className="font-bold">{yen(-projRemaining)} オーバー</span>。あと{hoursLabel(projNeedHours)}バイトが必要！</>
-                    ) : (
-                      <>予定を入れても <span className="font-bold">{yen(projRemaining)}</span> 残る見込み 👍</>
-                    )}
-                  </div>
-                </>
-              )}
-              <div className="flex gap-2">
-                <input type="text" value={plLabel} onChange={(e) => setPlLabel(e.target.value)} placeholder="内容（例: ライブ）" className={`${inputCls} flex-1 py-2 text-sm placeholder-gray-400`} />
-                <input type="number" inputMode="numeric" value={plAmount} onChange={(e) => setPlAmount(e.target.value)} placeholder="金額" className={`${inputCls} w-24 py-2 text-sm placeholder-gray-400`} />
-              </div>
-              <div className="flex gap-2">
-                <input type="date" value={plDate} onChange={(e) => setPlDate(e.target.value)} className={`${inputCls} flex-1 py-2 text-sm`} />
-                <button onClick={addPlanned} disabled={!plAmount} className="bg-purple-500 text-white rounded-xl px-4 font-bold disabled:opacity-40">予定追加</button>
-              </div>
-            </section>
-
             <section className="bg-purple-600 text-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
               <span className="text-xs opacity-80">💎 バイト時間でチェック</span>
               {over ? (
@@ -568,6 +532,61 @@ export default function Home() {
                   ))}
                 </ul>
               )}
+            </section>
+          </>
+        )}
+
+        {/* ====== 予定（先読み） ====== */}
+        {tab === "plan" && (
+          <>
+            {/* この先の予定で予算がどうなるかの先読みサマリー */}
+            <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
+              <span className="text-sm font-bold text-gray-700">🔮 この先の出費予定（先読み）</span>
+              <p className="text-[12px] text-gray-400">ライブ・グッズ予約など「これから使う予定」を入れると、予算オーバーになる前に教えます。</p>
+              <div className={`rounded-xl p-3 text-sm ${projOver ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+                {monthPlanned.length === 0 ? (
+                  <>まだ予定がありません。下から追加してみよう。</>
+                ) : projOver ? (
+                  <>予定どおりだと <span className="font-bold">{yen(-projRemaining)} オーバー</span>。あと{hoursLabel(projNeedHours)}バイトが必要！</>
+                ) : (
+                  <>予定を入れても <span className="font-bold">{yen(projRemaining)}</span> 残る見込み 👍</>
+                )}
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 border-t border-pink-100 pt-2">
+                <span>予算 {yen(budget)}</span><span>使った {yen(spent)}</span><span>予定 {yen(plannedTotal)}</span>
+              </div>
+            </section>
+
+            {/* 予定の追加 */}
+            <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
+              <span className="text-sm font-bold text-gray-700">＋ 予定を追加</span>
+              <input type="text" value={plLabel} onChange={(e) => setPlLabel(e.target.value)} placeholder="内容（例: ◯◯のライブ）" className={`${inputCls} w-full py-2 text-sm placeholder-gray-400`} />
+              <div className="flex gap-2">
+                <input type="number" inputMode="numeric" value={plAmount} onChange={(e) => setPlAmount(e.target.value)} placeholder="金額（円）" className={`${inputCls} flex-1 py-2 text-sm placeholder-gray-400`} />
+                <input type="date" value={plDate} onChange={(e) => setPlDate(e.target.value)} className={`${inputCls} flex-1 py-2 text-sm`} />
+              </div>
+              <button onClick={addPlanned} disabled={!plAmount} className="bg-purple-500 text-white rounded-full py-3 font-bold shadow-sm active:scale-95 transition disabled:opacity-40">予定を追加</button>
+              <p className="text-[11px] text-gray-400">追加した予定は📅カレンダーにも自動で表示されます。</p>
+            </section>
+
+            {/* 予定の一覧 */}
+            <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
+              <span className="text-sm font-bold text-gray-700">{view.m}月の予定（{monthPlanned.length}件）</span>
+              {monthPlanned.length === 0 ? (
+                <p className="text-sm text-gray-400">まだ予定がありません。</p>
+              ) : (
+                <ul className="flex flex-col gap-2 text-sm">
+                  {monthPlanned.map((p) => (
+                    <li key={p.id} className="flex items-center justify-between gap-2">
+                      <span className="flex-1 truncate"><span className="text-gray-400 text-xs">{p.date?.slice(5)} </span><span className="text-gray-800">{p.label}</span></span>
+                      <span className="text-purple-600">{yen(p.amount)}</span>
+                      <button onClick={() => fulfillPlanned(p)} className="text-[11px] text-green-600 font-bold px-1">使った</button>
+                      <button onClick={() => removePlanned(p.id)} className="text-gray-300 hover:text-red-400 px-1">✕</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-[11px] text-gray-400">「使った」を押すと、その予定が実際の出費に変わります。</p>
             </section>
           </>
         )}
@@ -775,19 +794,20 @@ export default function Home() {
           </>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v0.9</p>
+        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.0</p>
       </main>
+      </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-pink-100">
+      {/* 下のタブバー：スクロール領域の外に置き、枠の最下部に固定（中身と重ならない） */}
+      <nav className="absolute bottom-0 left-0 right-0 z-10 bg-white border-t border-pink-100">
         <div className="max-w-md mx-auto flex justify-around py-2">
-          {[{ key: "home", label: "ホーム", icon: "🏠" }, { key: "calendar", label: "カレンダー", icon: "📅" }, { key: "settings", label: "設定", icon: "⚙️" }].map((t) => (
+          {[{ key: "home", label: "ホーム", icon: "🏠" }, { key: "plan", label: "予定", icon: "🔮" }, { key: "calendar", label: "カレンダー", icon: "📅" }, { key: "settings", label: "設定", icon: "⚙️" }].map((t) => (
             <button key={t.key} onClick={() => setTab(t.key as typeof tab)} className={`flex flex-col items-center text-xs flex-1 ${tab === t.key ? "text-pink-600 font-bold" : "text-gray-400"}`}>
               <span className="text-lg">{t.icon}</span>{t.label}
             </button>
           ))}
         </div>
       </nav>
-      </div>
     </div>
   );
 }
