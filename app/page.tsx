@@ -426,6 +426,17 @@ export default function Home() {
         {/* ====== ホーム ====== */}
         {tab === "home" && (
           <>
+            {expenses.length === 0 && (
+              <section className="bg-gradient-to-br from-pink-500 to-purple-500 text-white rounded-2xl shadow-sm p-5 flex flex-col gap-2">
+                <span className="text-base font-bold">ようこそ！🐷</span>
+                <p className="text-sm opacity-95 leading-relaxed">推しに使った金額を入れると、それが<span className="font-bold underline decoration-white/60">「バイト何時間ぶん」</span>かをすぐ計算。使いすぎる前に気づけるアプリです。</p>
+                <div className="bg-white/15 rounded-xl px-3 py-2 text-sm">
+                  例：{yen(5000)} 課金 ＝ バイト<span className="font-bold">約{(5000 / (refWage || 1100)).toFixed(1)}時間</span>ぶん
+                </div>
+                <p className="text-xs opacity-80">↓ さっそく下の「＋ 出費を記録」から入れてみよう</p>
+              </section>
+            )}
+
             <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
               <span className="text-sm text-gray-500">今月つかえる残り</span>
               <span className={`text-4xl font-extrabold ${over ? "text-red-500" : "text-green-600"}`}>{over ? `−${yen(overAmount)}` : yen(remaining)}</span>
@@ -846,7 +857,7 @@ export default function Home() {
           </>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.1</p>
+        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.2</p>
       </main>
       </div>
 
