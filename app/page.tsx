@@ -389,6 +389,83 @@ export default function Home() {
     setSession(null);
     setCloudReady(false);
   }
+  const [sharing, setSharing] = useState(false);
+  const [shareMsg, setShareMsg] = useState("");
+  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    if (typeof ctx.roundRect === "function") { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); return; }
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  async function shareSummary() {
+    setShareMsg("");
+    setSharing(true);
+    try {
+      const W = 1080, H = 1350;
+      const canvas = document.createElement("canvas");
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { setSharing(false); return; }
+      const font = (size: number, weight = "bold") => `${weight} ${size}px system-ui, -apple-system, "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif`;
+      // 背景グラデ
+      const g = ctx.createLinearGradient(0, 0, W, H);
+      g.addColorStop(0, "#ec4899"); g.addColorStop(1, "#a855f7");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      // 白カード
+      ctx.fillStyle = "rgba(255,255,255,0.96)";
+      roundRect(ctx, 80, 150, W - 160, H - 300, 56); ctx.fill();
+      ctx.textAlign = "center";
+      // ヘッダー
+      ctx.fillStyle = "#db2777"; ctx.font = font(52);
+      ctx.fillText("🎀 オシヤリ", W / 2, 290);
+      ctx.fillStyle = "#9ca3af"; ctx.font = font(34, "normal");
+      ctx.fillText(`${view.y}年${view.m}月のまとめ`, W / 2, 350);
+      // 使った
+      ctx.fillStyle = "#6b7280"; ctx.font = font(40, "normal");
+      ctx.fillText("今月 推しに使った金額", W / 2, 500);
+      ctx.fillStyle = "#db2777"; ctx.font = font(150);
+      ctx.fillText(yen(spent), W / 2, 640);
+      // バイト時間換算（ハイライト帯）
+      ctx.fillStyle = "#7c3aed";
+      roundRect(ctx, 160, 720, W - 320, 150, 40); ctx.fill();
+      ctx.fillStyle = "#ffffff"; ctx.font = font(56);
+      ctx.fillText(`= バイト 約${spentHours.toFixed(1)} 時間ぶん`, W / 2, 815);
+      // 残り / 予算
+      ctx.fillStyle = "#6b7280"; ctx.font = font(38, "normal");
+      const remStr = over ? `予算を ${yen(overAmount)} オーバー中…！` : `今月あと ${yen(remaining)} 使える`;
+      ctx.fillText(remStr, W / 2, 980);
+      ctx.fillStyle = "#9ca3af"; ctx.font = font(32, "normal");
+      ctx.fillText(`予算 ${yen(budget)}（${percent}%）`, W / 2, 1035);
+      // フッター
+      ctx.fillStyle = "#ec4899"; ctx.font = font(36);
+      ctx.fillText("推し活のお金管理アプリ", W / 2, 1140);
+      ctx.fillStyle = "#a855f7"; ctx.font = font(34, "normal");
+      ctx.fillText("oshikatsu-yarikuri.vercel.app", W / 2, 1195);
+
+      const blob: Blob | null = await new Promise((res) => canvas.toBlob((b) => res(b), "image/png"));
+      if (!blob) { setSharing(false); return; }
+      const file = new File([blob], "oshikatsu.png", { type: "image/png" });
+      const text = `今月の推し活、${yen(spent)}使いました🐷\n= バイト約${spentHours.toFixed(1)}時間ぶん！\n\n推し活のお金管理アプリ「オシヤリ」で記録中🎀`;
+      const url = "https://oshikatsu-yarikuri.vercel.app";
+      const nav = navigator as Navigator & { canShare?: (d?: ShareData) => boolean };
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], text, url }); setSharing(false); return; } catch { /* キャンセル等 */ }
+      }
+      // 共有APIが使えない端末（主にPC）：画像を保存＋テキストをクリップボードへ
+      const dl = document.createElement("a");
+      dl.href = URL.createObjectURL(blob); dl.download = "oshikatsu.png"; dl.click();
+      URL.revokeObjectURL(dl.href);
+      try { await navigator.clipboard.writeText(`${text}\n${url}`); setShareMsg("画像を保存し、投稿文をコピーしました！Xに貼ってね📋"); }
+      catch { setShareMsg("画像を保存しました！投稿時に貼ってね📸"); }
+    } catch {
+      setShareMsg("シェアの準備に失敗しました。もう一度お試しを🙏");
+    }
+    setSharing(false);
+  }
   function changeMonth(delta: number) {
     let y = view.y, m = view.m + delta;
     if (m < 1) { m = 12; y--; } else if (m > 12) { m = 1; y++; }
@@ -468,6 +545,15 @@ export default function Home() {
               <p className="text-[12px] opacity-80 border-t border-white/20 pt-2">これまでの出費 {yen(spent)} ＝ 約{spentHours.toFixed(1)}時間 働いた分（{yen(refWage)}/時で計算）</p>
             </section>
 
+            {spent > 0 && (
+              <section className="flex flex-col gap-2">
+                <button onClick={shareSummary} disabled={sharing} className="bg-white border-2 border-pink-300 text-pink-600 rounded-2xl py-3 font-bold shadow-sm active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-2">
+                  <span>{sharing ? "作成中…" : "📸 今月のまとめを画像でシェア"}</span>
+                </button>
+                {shareMsg && <p className="text-[11px] text-gray-500 text-center">{shareMsg}</p>}
+              </section>
+            )}
+
             {monthlyIncome > 0 && (
               <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-1">
                 <span className="text-sm text-gray-500">今月の収入（{incomeMode === "shift" ? "シフトから自動計算" : "月収入力"}）</span>
@@ -504,7 +590,11 @@ export default function Home() {
                   {goalRemaining > 0 ? (
                     <p className="text-sm text-purple-600">あと {yen(goalRemaining)}（バイト{hoursLabel(goalNeedHours)}ぶん）</p>
                   ) : (
-                    <p className="text-sm font-bold text-green-600">🎉 目標達成！おめでとう！</p>
+                    <div className="goal-celebrate flex flex-col items-center gap-1 py-2 bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl">
+                      <div className="text-2xl"><span className="sparkle">✨</span><span className="sparkle">🎉</span><span className="sparkle">✨</span></div>
+                      <p className="text-base font-bold text-green-600">目標達成！おめでとう🎀</p>
+                      <p className="text-[11px] text-gray-500">{goalName} のために {yen(goalTarget)} 貯まりました！</p>
+                    </div>
                   )}
                   <div className="flex gap-2">
                     <input type="number" inputMode="numeric" value={goalAddInput} onChange={(e) => setGoalAddInput(e.target.value)} placeholder="貯金額を追加" className={`${inputCls} flex-1 py-2 text-sm placeholder-gray-400`} />
@@ -857,7 +947,7 @@ export default function Home() {
           </>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.2</p>
+        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.3</p>
       </main>
       </div>
 
