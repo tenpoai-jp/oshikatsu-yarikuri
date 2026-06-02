@@ -267,6 +267,25 @@ export default function Home() {
   const catEntries = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
   const breakdownEntries = breakdownBy === "oshi" ? oshiEntries : catEntries;
 
+  // 月ごとの出費推移（表示中の月から過去6か月）
+  const trendData = (() => {
+    const arr: { y: number; m: number; total: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      let y = view.y, m = view.m - i;
+      while (m < 1) { m += 12; y--; }
+      const total = expenses.reduce((s, e) => {
+        const [ey, em] = (e.date || "").split("-").map(Number);
+        return ey === y && em === m ? s + e.amount : s;
+      }, 0);
+      arr.push({ y, m, total });
+    }
+    return arr;
+  })();
+  const trendMax = Math.max(budget, ...trendData.map((d) => d.total), 1);
+  const prevMonthTotal = trendData[trendData.length - 2]?.total ?? 0;
+  const moMDiff = spent - prevMonthTotal; // 先月比（プラス=使いすぎ）
+  const hasTrend = trendData.some((d) => d.total > 0);
+
   const dayExp: Record<number, number> = {};
   const dayWork: Record<number, number> = {};
   expenses.forEach((e) => {
@@ -504,6 +523,39 @@ export default function Home() {
                     );
                   })}
                 </div>
+              </section>
+            )}
+
+            {hasTrend && (
+              <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-gray-700">📈 月ごとの推移</span>
+                  {prevMonthTotal > 0 && (
+                    <span className={`text-xs font-bold ${moMDiff > 0 ? "text-red-500" : "text-green-600"}`}>
+                      先月比 {moMDiff > 0 ? "+" : "−"}{yen(Math.abs(moMDiff))}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-end justify-between gap-1.5 h-28">
+                  {trendData.map((d) => {
+                    const h = Math.round((d.total / trendMax) * 100);
+                    const isCur = d.y === view.y && d.m === view.m;
+                    const isOver = budget > 0 && d.total > budget;
+                    return (
+                      <div key={`${d.y}-${d.m}`} className="flex-1 min-w-0 flex flex-col items-center gap-1">
+                        <span className="text-[9px] leading-none text-gray-500 h-3">{d.total > 0 ? (d.total >= 1000 ? `${Math.round(d.total / 100) / 10}k` : d.total) : ""}</span>
+                        <div className="w-full flex-1 flex items-end">
+                          <div className={`w-full rounded-t-md ${isOver ? "bg-red-400" : isCur ? "bg-pink-500" : "bg-pink-200"}`} style={{ height: `${d.total > 0 ? Math.max(6, h) : 0}%` }} />
+                        </div>
+                        <span className={`text-[9px] leading-none ${isCur ? "text-pink-600 font-bold" : "text-gray-400"}`}>{d.m}月</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  {budget > 0 ? <>赤いバー＝予算（{yen(budget)}）オーバーした月。</> : null}
+                  {moMDiff > 0 ? "先月より使ってるので注意！" : prevMonthTotal > 0 ? "先月より節約できてる👍" : "来月以降、使い方の変化がグラフでわかります。"}
+                </p>
               </section>
             )}
 
@@ -794,7 +846,7 @@ export default function Home() {
           </>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.0</p>
+        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.1</p>
       </main>
       </div>
 
