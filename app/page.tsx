@@ -11,6 +11,15 @@ type Shift = { id: number; date: string; start?: string; end?: string; hours?: n
 type Planned = { id: number; label: string; amount: number; date: string };
 
 const CATEGORIES = ["グッズ", "ライブ・イベント", "投げ銭・スパチャ", "メンバーシップ", "交通費", "その他"];
+const CATEGORY_META: Record<string, { icon: string; color: string }> = {
+  "グッズ": { icon: "🛍️", color: "#ec4899" },
+  "ライブ・イベント": { icon: "🎤", color: "#a855f7" },
+  "投げ銭・スパチャ": { icon: "💸", color: "#f59e0b" },
+  "メンバーシップ": { icon: "💎", color: "#3b82f6" },
+  "交通費": { icon: "🚃", color: "#10b981" },
+  "その他": { icon: "🎀", color: "#9ca3af" },
+};
+const catMeta = (c: string) => CATEGORY_META[c] ?? { icon: "🎀", color: "#9ca3af" };
 const DEFAULT_WAGES: Wages = { morning: 1000, day: 1100, evening: 1200, night: 1375 };
 const ZONE_LABELS: { key: keyof Wages; label: string }[] = [
   { key: "morning", label: "朝" },
@@ -618,8 +627,8 @@ export default function Home() {
                     const w = spent > 0 ? Math.round((total / spent) * 100) : 0;
                     return (
                       <div key={name} className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-gray-600"><span className="truncate">{name}</span><span>{yen(total)}（{w}%）</span></div>
-                        <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${w}%`, backgroundColor: PALETTE[i % PALETTE.length] }} /></div>
+                        <div className="flex justify-between text-xs text-gray-600"><span className="truncate">{breakdownBy === "category" ? `${catMeta(name).icon} ${name}` : name}</span><span>{yen(total)}（{w}%）</span></div>
+                        <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${w}%`, backgroundColor: breakdownBy === "category" ? catMeta(name).color : PALETTE[i % PALETTE.length] }} /></div>
                       </div>
                     );
                   })}
@@ -678,9 +687,14 @@ export default function Home() {
                 <ul className="flex flex-col gap-2 text-sm">
                   {expenses.slice(0, 8).map((e) => (
                     <li key={e.id} className="flex items-center justify-between gap-2">
-                      <span className="flex-1 truncate"><span className="text-gray-400 text-xs">{e.date?.slice(5)} </span><span className="text-gray-800">{e.oshi}</span><span className="text-gray-400"> ・ {e.category}</span></span>
-                      <span className="text-gray-700">{yen(e.amount)}</span>
-                      <button onClick={() => removeExpense(e.id)} className="text-gray-300 hover:text-red-400 px-1" aria-label="削除">✕</button>
+                      <span className="flex-1 truncate flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: catMeta(e.category).color }} />
+                        <span className="text-gray-400 text-xs shrink-0">{e.date?.slice(5)}</span>
+                        <span className="text-gray-800 truncate">{catMeta(e.category).icon} {e.oshi}</span>
+                        <span className="text-gray-400 truncate">・ {e.category}</span>
+                      </span>
+                      <span className="text-gray-700 shrink-0">{yen(e.amount)}</span>
+                      <button onClick={() => removeExpense(e.id)} className="text-gray-300 hover:text-red-400 px-1 shrink-0" aria-label="削除">✕</button>
                     </li>
                   ))}
                 </ul>
@@ -786,9 +800,13 @@ export default function Home() {
                     <ul className="flex flex-col gap-2 text-sm">
                       {selExpenses.map((e) => (
                         <li key={e.id} className="flex items-center justify-between gap-2">
-                          <span className="flex-1 truncate"><span className="text-gray-800">{e.oshi}</span><span className="text-gray-400"> ・ {e.category}</span></span>
-                          <span className="text-gray-700">{yen(e.amount)}</span>
-                          <button onClick={() => removeExpense(e.id)} className="text-gray-300 hover:text-red-400 px-1">✕</button>
+                          <span className="flex-1 truncate flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: catMeta(e.category).color }} />
+                            <span className="text-gray-800 truncate">{catMeta(e.category).icon} {e.oshi}</span>
+                            <span className="text-gray-400 truncate">・ {e.category}</span>
+                          </span>
+                          <span className="text-gray-700 shrink-0">{yen(e.amount)}</span>
+                          <button onClick={() => removeExpense(e.id)} className="text-gray-300 hover:text-red-400 px-1 shrink-0">✕</button>
                         </li>
                       ))}
                     </ul>
@@ -971,7 +989,7 @@ export default function Home() {
           </>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.4</p>
+        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.5</p>
       </main>
       </div>
 
