@@ -944,10 +944,34 @@ export default function Home() {
                 </>
               )}
             </section>
+
+            <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">
+              <span className="text-sm font-bold text-gray-700">📄 利用規約・プライバシー</span>
+              <details className="text-sm text-gray-600">
+                <summary className="cursor-pointer text-pink-600 font-medium">利用規約をひらく</summary>
+                <div className="mt-2 flex flex-col gap-2 text-[13px] leading-relaxed text-gray-600">
+                  <p>「オシヤリ」（以下、本アプリ）は個人が無料で提供する推し活のお金管理ツールです。ご利用の前に以下をご確認ください。</p>
+                  <p>1. 本アプリは現状のまま提供され、内容の正確性・継続提供を保証しません。予告なく変更・終了する場合があります。</p>
+                  <p>2. 入力された金額やバイト時間の計算結果は目安です。最終的な判断はご自身の責任でお願いします。</p>
+                  <p>3. データ消失・不具合・本アプリの利用により生じた損害について、提供者は責任を負いません。大切なデータは控えをおすすめします。</p>
+                  <p>4. 壁紙などに使う画像は、ご自身や第三者の著作権・肖像権を侵害しない範囲でご利用ください。権利侵害の責任は利用者が負います。</p>
+                </div>
+              </details>
+              <details className="text-sm text-gray-600">
+                <summary className="cursor-pointer text-pink-600 font-medium">プライバシーについてひらく</summary>
+                <div className="mt-2 flex flex-col gap-2 text-[13px] leading-relaxed text-gray-600">
+                  <p>・入力データ（出費・予算・シフト・壁紙画像など）は、まずお使いの端末内（ブラウザのlocalStorage）に保存されます。</p>
+                  <p>・ログインした場合のみ、端末をまたいで使えるよう、データを安全なクラウド（Supabase）にも保存します。あなたのデータはあなたのアカウントだけが見られます。</p>
+                  <p>・データを広告や第三者に販売・提供することはありません。</p>
+                  <p>・利用状況の把握のため、ページの閲覧数などの匿名のアクセス統計（Vercel Analytics）を取得します。Cookieは使わず、個人を特定する情報は集めません。</p>
+                  <p>・ログアウトや「壁紙を外す」、ブラウザのデータ削除でデータを消せます。</p>
+                </div>
+              </details>
+            </section>
           </>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.3</p>
+        <p className="text-center text-xs text-gray-400 mt-2">推し活やりくりツール — v1.4</p>
       </main>
       </div>
 
